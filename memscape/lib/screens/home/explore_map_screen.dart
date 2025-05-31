@@ -277,18 +277,18 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
               controller: _searchController,
               onSubmitted: _searchPlace,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onBackground,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               decoration: InputDecoration(
                 hintText: "Search a city or place...",
                 hintStyle: TextStyle(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onBackground.withOpacity(0.6),
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 prefixIcon: Icon(
                   Icons.search,
-                  color: Theme.of(context).colorScheme.onBackground,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -378,7 +378,7 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
 
                 return Container(
                   decoration: BoxDecoration(
-                    color: colorScheme.background,
+                    color: colorScheme.surface,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(20),
                     ),
@@ -405,7 +405,7 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
                         "📍 Memories in '${_searchedCity!.toUpperCase()}'",
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: colorScheme.onBackground,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 12),

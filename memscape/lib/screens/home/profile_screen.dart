@@ -1,10 +1,11 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:memscape/screens/home/edit_profile_screen.dart';
+import 'package:memscape/screens/home/followers_list_screen.dart';
+import 'package:memscape/screens/home/following_feed_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,12 +16,11 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final user = FirebaseAuth.instance.currentUser!;
-  final _nameController = TextEditingController();
-  final _bioController = TextEditingController();
-
+  String name = '';
+  String bio = '';
   String? imagePath;
   String? imageBase64;
-  bool isLoading = true;
+  List<String> photoRefs = [];
 
   final realtimeDB = FirebaseDatabase.instance;
 
@@ -37,12 +37,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               .collection('users')
               .doc(user.uid)
               .get();
-
       if (doc.exists) {
         final data = doc.data()!;
-        _nameController.text = data['name'] ?? '';
-        _bioController.text = data['bio'] ?? '';
+        name = data['name'] ?? '';
+        bio = data['bio'] ?? '';
         imagePath = data['profileImagePath'];
+        photoRefs = List<String>.from(data['photoRefs'] ?? []);
 
         if (imagePath != null && imagePath!.isNotEmpty) {
           final snapshot = await realtimeDB.ref(imagePath!).get();
@@ -54,112 +54,149 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       debugPrint("❌ Error loading profile: $e");
     }
-
-    if (mounted) {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _pickAndUploadImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile == null) return;
-
-    final bytes = await File(pickedFile.path).readAsBytes();
-    final base64String = base64Encode(bytes);
-
-    final path = "profile_images/${user.uid}";
-
-    await realtimeDB.ref(path).set(base64String);
-
-    setState(() {
-      imagePath = path;
-      imageBase64 = base64String;
-    });
-
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-      'profileImagePath': path,
-    }, SetOptions(merge: true));
-  }
-
-  Future<void> _saveProfile() async {
-    try {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'name': _nameController.text.trim(),
-        'bio': _bioController.text.trim(),
-        'profileImagePath': imagePath ?? '',
-      }, SetOptions(merge: true));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Profile saved successfully")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("❌ Failed to save profile: $e")));
-    }
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final imageProvider =
+        imageBase64 != null
+            ? MemoryImage(base64Decode(imageBase64!))
+            : const NetworkImage(
+                  "https://www.pngall.com/wp-content/uploads/5/Profile-Avatar-PNG.png",
+                )
+                as ImageProvider;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("👤 My Profile"),
+        title: const Text("My Profile"),
         actions: [
-          IconButton(icon: const Icon(Icons.save), onPressed: _saveProfile),
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
+            },
+          ),
         ],
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        CircleAvatar(
-                          radius: 60,
-                          backgroundImage:
-                              imageBase64 != null
-                                  ? MemoryImage(base64Decode(imageBase64!))
-                                  : const NetworkImage(
-                                        "https://www.pngall.com/wp-content/uploads/5/Profile-Avatar-PNG.png",
-                                      )
-                                      as ImageProvider,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            CircleAvatar(radius: 50, backgroundImage: imageProvider),
+            const SizedBox(height: 10),
+            Text(
+              name,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(bio, style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildStat("Photos", photoRefs.length),
+                GestureDetector(
+                  onTap:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FollowersListScreen(),
                         ),
-
-                        IconButton(
-                          icon: const Icon(Icons.camera_alt),
-                          onPressed: _pickAndUploadImage,
+                      ),
+                  child: _buildStat("Followers", 0),
+                ),
+                GestureDetector(
+                  onTap:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FollowingFeedScreen(),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    TextField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Name',
-                        border: OutlineInputBorder(),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _bioController,
-                      decoration: const InputDecoration(
-                        labelText: 'Bio',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 3,
-                    ),
-                  ],
+                  child: _buildStat("Following", 0),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Posts",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
+            ),
+            const SizedBox(height: 10),
+            _buildPhotoGrid(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStat(String label, int count) {
+    return Column(
+      children: [
+        Text(
+          '$count',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        Text(label, style: const TextStyle(color: Colors.grey)),
+      ],
+    );
+  }
+
+  Widget _buildPhotoGrid() {
+    if (photoRefs.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Text("No posts yet."),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: photoRefs.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
+        ),
+        itemBuilder: (context, index) {
+          final refPath = "images/${photoRefs[index]}";
+          return FutureBuilder<DataSnapshot>(
+            future: realtimeDB.ref(refPath).get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(strokeWidth: 1),
+                );
+              }
+
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return const Icon(Icons.broken_image);
+              }
+
+              final base64String = snapshot.data!.value as String;
+              final image = MemoryImage(base64Decode(base64String));
+
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image(image: image, fit: BoxFit.cover),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

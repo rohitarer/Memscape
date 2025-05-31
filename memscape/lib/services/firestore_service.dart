@@ -38,12 +38,13 @@ class FirestoreService {
   /// Fetch public photos (limit optional)
   Future<List<PhotoModel>> fetchPublicPhotos({int limit = 20}) async {
     try {
-      final querySnapshot = await _firestore
-          .collection(photosCollection)
-          .where('isPublic', isEqualTo: true)
-          .orderBy('timestamp', descending: true)
-          .limit(limit)
-          .get();
+      final querySnapshot =
+          await _firestore
+              .collection(photosCollection)
+              .where('isPublic', isEqualTo: true)
+              .orderBy('timestamp', descending: true)
+              .limit(limit)
+              .get();
 
       return querySnapshot.docs
           .map((doc) => PhotoModel.fromMap(doc.data(), doc.id))
@@ -60,9 +61,12 @@ class FirestoreService {
         .where('isPublic', isEqualTo: true)
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => PhotoModel.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => PhotoModel.fromMap(doc.data(), doc.id))
+                  .toList(),
+        );
   }
 
   /// Store reference in user's document
@@ -79,7 +83,9 @@ class FirestoreService {
 
   /// Stream photo reference IDs from user doc
   Stream<List<String>> getUserPhotoReferences(String uid) {
-    return _firestore.collection(usersCollection).doc(uid).snapshots().map((doc) {
+    return _firestore.collection(usersCollection).doc(uid).snapshots().map((
+      doc,
+    ) {
       final data = doc.data();
       if (data == null || !data.containsKey('photoRefs')) return [];
       final List<dynamic> rawList = data['photoRefs'];
@@ -90,11 +96,12 @@ class FirestoreService {
   /// Fetch all photos uploaded by specific user
   Future<List<PhotoModel>> fetchUserPhotos({required String userId}) async {
     try {
-      final snapshot = await _firestore
-          .collection(photosCollection)
-          .where('uid', isEqualTo: userId)
-          .orderBy('timestamp', descending: true)
-          .get();
+      final snapshot =
+          await _firestore
+              .collection(photosCollection)
+              .where('uid', isEqualTo: userId)
+              .orderBy('timestamp', descending: true)
+              .get();
 
       return snapshot.docs
           .map((doc) => PhotoModel.fromMap(doc.data(), doc.id))
@@ -115,27 +122,33 @@ class FirestoreService {
 
     final isLiked = likes.contains(userId);
     await ref.update({
-      'likes': isLiked
-          ? FieldValue.arrayRemove([userId])
-          : FieldValue.arrayUnion([userId]),
+      'likes':
+          isLiked
+              ? FieldValue.arrayRemove([userId])
+              : FieldValue.arrayUnion([userId]),
     });
   }
 
   /// Add comment to a photo
-  Future<void> addComment(String photoId, String userId, String commentText) async {
-    final ref = _firestore.collection(photosCollection).doc(photoId);
-    final snap = await ref.get();
+  Future<void> addComment(
+    String photoId,
+    String uid,
+    String commentText,
+  ) async {
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final username = userDoc['username'] ?? 'User';
 
-    if (!snap.exists) return;
-
-    final newComment = {
-      'uid': userId,
+    final comment = {
+      'uid': uid,
+      'username': username,
       'text': commentText,
-      'timestamp': FieldValue.serverTimestamp(),
+      'timestamp':
+          Timestamp.now(), // ✅ use real timestamp instead of serverTimestamp()
     };
 
-    await ref.update({
-      'comments': FieldValue.arrayUnion([newComment]),
+    await FirebaseFirestore.instance.collection('photos').doc(photoId).update({
+      'comments': FieldValue.arrayUnion([comment]),
     });
   }
 
@@ -151,8 +164,12 @@ class FirestoreService {
 
   /// Follow/unfollow user
   Future<void> toggleFollow(String currentUserId, String targetUserId) async {
-    final currentUserRef = _firestore.collection(usersCollection).doc(currentUserId);
-    final targetUserRef = _firestore.collection(usersCollection).doc(targetUserId);
+    final currentUserRef = _firestore
+        .collection(usersCollection)
+        .doc(currentUserId);
+    final targetUserRef = _firestore
+        .collection(usersCollection)
+        .doc(targetUserId);
 
     final currentSnap = await currentUserRef.get();
     final currentData = currentSnap.data() ?? {};
@@ -160,15 +177,17 @@ class FirestoreService {
     final isFollowing = currentFollowing.contains(targetUserId);
 
     await currentUserRef.update({
-      'following': isFollowing
-          ? FieldValue.arrayRemove([targetUserId])
-          : FieldValue.arrayUnion([targetUserId]),
+      'following':
+          isFollowing
+              ? FieldValue.arrayRemove([targetUserId])
+              : FieldValue.arrayUnion([targetUserId]),
     });
 
     await targetUserRef.update({
-      'followers': isFollowing
-          ? FieldValue.arrayRemove([currentUserId])
-          : FieldValue.arrayUnion([currentUserId]),
+      'followers':
+          isFollowing
+              ? FieldValue.arrayRemove([currentUserId])
+              : FieldValue.arrayUnion([currentUserId]),
     });
   }
 
@@ -181,8 +200,6 @@ class FirestoreService {
     return currentFollowing.contains(targetUserId);
   }
 }
-
-
 
 // import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:firebase_database/firebase_database.dart';
