@@ -22,15 +22,37 @@ class _PhotoCardState extends State<PhotoCard> {
   final currentUser = FirebaseAuth.instance.currentUser;
   final TextEditingController _commentController = TextEditingController();
 
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _imageFuture = FirestoreService().fetchImageBase64(widget.photo.imagePath!);
+  //   _userFuture = FirebaseFirestore.instance
+  //       .collection('users')
+  //       .doc(widget.photo.uid)
+  //       .get()
+  //       .then((doc) => doc.data());
+  // }
+
   @override
   void initState() {
     super.initState();
-    _imageFuture = FirestoreService().fetchImageBase64(widget.photo.imagePath!);
-    _userFuture = FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.photo.uid)
-        .get()
-        .then((doc) => doc.data());
+
+    final imagePath = widget.photo.imagePath;
+    final uid = widget.photo.uid;
+
+    _imageFuture =
+        (imagePath != null && imagePath.isNotEmpty)
+            ? FirestoreService().fetchImageBase64(imagePath)
+            : Future.value(null);
+
+    _userFuture =
+        (uid.isNotEmpty)
+            ? FirebaseFirestore.instance
+                .collection('users')
+                .doc(uid)
+                .get()
+                .then((doc) => doc.data())
+            : Future.value(null);
   }
 
   bool get isLiked => widget.photo.likes.contains(currentUser?.uid);
@@ -68,7 +90,50 @@ class _PhotoCardState extends State<PhotoCard> {
               /// 🔹 Header
               Padding(
                 padding: const EdgeInsets.all(12),
-                child: Row(
+                child:
+                // Row(
+                //   children: [
+                //     FutureBuilder<String?>(
+                //       future: FirestoreService().fetchImageBase64(
+                //         profileImagePath,
+                //       ),
+                //       builder: (context, profileSnap) {
+                //         if (profileSnap.hasData && profileSnap.data != null) {
+                //           return CircleAvatar(
+                //             radius: 20,
+                //             backgroundImage: MemoryImage(
+                //               base64Decode(profileSnap.data!),
+                //             ),
+                //           );
+                //         }
+                //         return const CircleAvatar(
+                //           radius: 20,
+                //           backgroundImage: NetworkImage(
+                //             "https://www.pngall.com/wp-content/uploads/5/Profile-Avatar-PNG.png",
+                //           ),
+                //         );
+                //       },
+                //     ),
+                //     const SizedBox(width: 10),
+                //     Column(
+                //       crossAxisAlignment: CrossAxisAlignment.start,
+                //       children: [
+                //         Text(
+                //           username,
+                //           style: const TextStyle(fontWeight: FontWeight.bold),
+                //         ),
+                //         if (widget.photo.location.isNotEmpty)
+                //           Text(
+                //             widget.photo.location,
+                //             style: const TextStyle(color: Colors.grey),
+                //           ),
+                //       ],
+                //     ),
+                //     const Spacer(),
+                //     const Icon(Icons.more_vert),
+                //   ],
+                // ),
+                Row(
                   children: [
                     FutureBuilder<String?>(
                       future: FirestoreService().fetchImageBase64(
@@ -92,21 +157,24 @@ class _PhotoCardState extends State<PhotoCard> {
                       },
                     ),
                     const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          username,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        if (widget.photo.location.isNotEmpty)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            widget.photo.location,
-                            style: const TextStyle(color: Colors.grey),
+                            username,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                      ],
+                          if (widget.photo.location.isNotEmpty)
+                            Text(
+                              widget.photo.location,
+                              style: const TextStyle(color: Colors.grey),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                        ],
+                      ),
                     ),
-                    const Spacer(),
                     const Icon(Icons.more_vert),
                   ],
                 ),

@@ -138,25 +138,59 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
         permission == LocationPermission.whileInUse;
   }
 
+  // Future<void> _fetchPhotos() async {
+  //   final data = await FirebaseFirestore.instance.collection('photos').get();
+
+  //   setState(() {
+  //     _allPhotos =
+  //         data.docs
+  //             .map((doc) {
+  //               final d = doc.data();
+  //               return PhotoModel(
+  //                 caption: d['caption'] ?? '',
+  //                 location: d['location'] ?? '',
+  //                 lat: d['lat'],
+  //                 lng: d['lng'],
+  //                 imagePath: d['imagePath'] ?? '',
+  //                 imageBase64: null, // Will be loaded later if needed
+  //                 uid: d['uid'] ?? '',
+  //                 timestamp:
+  //                     DateTime.tryParse(d['timestamp'] ?? '') ?? DateTime.now(),
+  //                 isPublic: d['isPublic'] ?? false,
+  //               );
+  //             })
+  //             .where((p) => p.lat != null && p.lng != null && p.isPublic)
+  //             .toList();
+  //   });
+  // }
+
   Future<void> _fetchPhotos() async {
-    final data = await FirebaseFirestore.instance.collection('photos').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collectionGroup('photos').get();
 
     setState(() {
       _allPhotos =
-          data.docs
+          snapshot.docs
               .map((doc) {
-                final d = doc.data();
+                final data = doc.data();
+                final place = doc.reference.parent.parent?.id ?? 'Unknown';
+
                 return PhotoModel(
-                  caption: d['caption'] ?? '',
-                  location: d['location'] ?? '',
-                  lat: d['lat'],
-                  lng: d['lng'],
-                  imagePath: d['imagePath'] ?? '',
-                  imageBase64: null, // Will be loaded later if needed
-                  uid: d['uid'] ?? '',
+                  uid: data['uid'] ?? '',
+                  imagePath: data['imagePath'] ?? '',
+                  caption: data['caption'] ?? '',
+                  location: data['location'] ?? '',
+                  place: place,
                   timestamp:
-                      DateTime.tryParse(d['timestamp'] ?? '') ?? DateTime.now(),
-                  isPublic: d['isPublic'] ?? false,
+                      DateTime.tryParse(data['timestamp'] ?? '') ??
+                      DateTime.now(),
+                  lat: (data['lat'] as num?)?.toDouble(),
+                  lng: (data['lng'] as num?)?.toDouble(),
+                  isPublic: data['isPublic'] ?? false,
+                  likes: List<String>.from(data['likes'] ?? []),
+                  comments: List<Map<String, dynamic>>.from(
+                    data['comments'] ?? [],
+                  ),
                 );
               })
               .where((p) => p.lat != null && p.lng != null && p.isPublic)
@@ -276,9 +310,7 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
             child: TextField(
               controller: _searchController,
               onSubmitted: _searchPlace,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: "Search a city or place...",
                 hintStyle: TextStyle(

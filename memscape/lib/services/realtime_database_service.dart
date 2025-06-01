@@ -6,42 +6,81 @@ class RealtimeDatabaseService {
   final DatabaseReference _db = FirebaseDatabase.instance.ref();
 
   /// 🔼 Upload base64 image to /images/{imageId}
-  Future<void> uploadBase64Image(String imageId, String base64) async {
-    try {
-      await _db.child('images').child(imageId).set(base64);
-      debugPrint("🖼️ Base64 image uploaded to /images/$imageId");
-    } catch (e) {
-      throw Exception("❌ Failed to upload base64 image: $e");
-    }
+  // Future<void> uploadBase64Image(String imageId, String base64) async {
+  //   try {
+  //     await _db.child('images').child(imageId).set(base64);
+  //     debugPrint("🖼️ Base64 image uploaded to /images/$imageId");
+  //   } catch (e) {
+  //     throw Exception("❌ Failed to upload base64 image: $e");
+  //   }
+  // }
+
+  // /// 🔼 Upload photo metadata (without base64) to /photos/{uid}/{imageId}
+  // Future<void> uploadPhotoMetadata(PhotoModel photo, String imageId) async {
+  //   try {
+  //     await _db
+  //         .child('photos')
+  //         .child(photo.uid)
+  //         .child(imageId)
+  //         .set(
+  //           photo
+  //               .copyWith(imageBase64: null, imagePath: "images/$imageId")
+  //               .toMap(),
+  //         );
+
+  //     debugPrint("✅ Metadata uploaded for user ${photo.uid} → $imageId");
+  //   } catch (e) {
+  //     throw Exception("❌ Failed to upload metadata: $e");
+  //   }
+  // }
+
+  // /// 🚀 High-level function to upload photo + base64 together
+  // Future<void> uploadPhoto(PhotoModel photo) async {
+  //   final imageId =
+  //       "${photo.caption}_${photo.timestamp.millisecondsSinceEpoch}";
+
+  //   await uploadBase64Image(imageId, photo.imageBase64 ?? '');
+  //   await uploadPhotoMetadata(photo, imageId);
+  // }
+
+  /// ✅ Upload base64 image to Realtime DB under /images/{imageId}
+Future<void> uploadBase64Image(String imageId, String base64) async {
+  try {
+    await _db.child('images').child(imageId).set(base64);
+    debugPrint("🖼️ Base64 image uploaded at images/$imageId");
+  } catch (e) {
+    throw Exception("❌ Failed to upload base64 image: $e");
   }
+}
 
-  /// 🔼 Upload photo metadata (without base64) to /photos/{uid}/{imageId}
-  Future<void> uploadPhotoMetadata(PhotoModel photo, String imageId) async {
-    try {
-      await _db
-          .child('photos')
-          .child(photo.uid)
-          .child(imageId)
-          .set(
-            photo
-                .copyWith(imageBase64: null, imagePath: "images/$imageId")
-                .toMap(),
-          );
+/// 🔼 Upload metadata (excluding base64) to /photos/{uid}/{imageId}
+Future<void> uploadPhotoMetadata(PhotoModel photo, String imageId) async {
+  try {
+    final metadata = photo.copyWith(
+      imageBase64: null,
+      imagePath: "images/$imageId",
+    ).toMap();
 
-      debugPrint("✅ Metadata uploaded for user ${photo.uid} → $imageId");
-    } catch (e) {
-      throw Exception("❌ Failed to upload metadata: $e");
-    }
+    await _db
+        .child('photos')
+        .child(photo.uid)
+        .child(imageId)
+        .set(metadata);
+
+    debugPrint("✅ Metadata uploaded for ${photo.uid} → $imageId");
+  } catch (e) {
+    throw Exception("❌ Failed to upload metadata: $e");
   }
+}
 
-  /// 🚀 High-level function to upload photo + base64 together
-  Future<void> uploadPhoto(PhotoModel photo) async {
-    final imageId =
-        "${photo.caption}_${photo.timestamp.millisecondsSinceEpoch}";
+/// 🚀 High-level function: Upload photo base64 + metadata
+Future<void> uploadPhoto(PhotoModel photo) async {
+  final imageId = "${photo.caption}_${photo.timestamp.millisecondsSinceEpoch}";
 
-    await uploadBase64Image(imageId, photo.imageBase64 ?? '');
-    await uploadPhotoMetadata(photo, imageId);
-  }
+  await uploadBase64Image(imageId, photo.imageBase64 ?? '');
+  await uploadPhotoMetadata(photo, imageId);
+}
+
 
   /// 📥 Fetch all photos from all users (for map/explore)
   Future<List<PhotoModel>> getAllPhotos() async {

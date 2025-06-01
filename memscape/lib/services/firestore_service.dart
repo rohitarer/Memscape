@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
 import '../models/photo_model.dart';
 
 class FirestoreService {
@@ -13,43 +14,67 @@ class FirestoreService {
   /// Upload base64 to Realtime DB and metadata to Firestore (excluding base64)
   Future<void> uploadPhoto(PhotoModel photo, String base64Image) async {
     try {
-      final docRef = _firestore.collection(photosCollection).doc();
+      final place = photo.place.trim().isEmpty ? "Unknown" : photo.place;
+      final docRef =
+          _firestore
+              .collection('photos')
+              .doc(place) // Folder for each place
+              .collection('photos')
+              .doc(); // Auto-generated photo document
+
       final imagePath = "$base64ImagePath/${docRef.id}";
 
-      // Upload base64 image to Realtime Database
+      // 🔼 Upload base64 image to Realtime Database
       await _realtime.ref(imagePath).set(base64Image);
 
-      // Upload metadata to Firestore (excluding imageBase64)
-      final updatedPhoto = photo.copyWith(
-        imagePath: imagePath,
-        imageBase64: null,
-      );
+      // 📄 Prepare metadata (excluding base64)
+      final updatedPhoto = photo.copyWith(imagePath: imagePath);
+
+      // 🔽 Upload photo metadata to Firestore
       await docRef.set(updatedPhoto.toMap());
 
-      // Add reference to user's document
+      // 🔁 Add Firestore reference under user's data (optional)
       await uploadPhotoReference(photo.uid, docRef.id);
 
-      print("✅ Firestore: Metadata saved | Realtime DB imagePath → $imagePath");
+      print("✅ Firestore: Metadata saved | Realtime DB → $imagePath");
     } catch (e) {
       throw Exception("❌ Firestore uploadPhoto failed: $e");
     }
   }
 
   /// Fetch public photos (limit optional)
-  Future<List<PhotoModel>> fetchPublicPhotos({int limit = 20}) async {
+  // Future<List<PhotoModel>> fetchPublicPhotos({int limit = 20}) async {
+  //   try {
+  //     final querySnapshot =
+  //         await _firestore
+  //             .collection(photosCollection)
+  //             .where('isPublic', isEqualTo: true)
+  //             .orderBy('timestamp', descending: true)
+  //             .limit(limit)
+  //             .get();
+
+  //     return querySnapshot.docs
+  //         .map((doc) => PhotoModel.fromMap(doc.data(), doc.id))
+  //         .toList();
+  //   } catch (e) {
+  //     throw Exception("❌ Firestore fetchPublicPhotos failed: $e");
+  //   }
+  // }
+
+  Future<List<PhotoModel>> fetchPublicPhotos() async {
     try {
       final querySnapshot =
-          await _firestore
-              .collection(photosCollection)
+          await FirebaseFirestore.instance
+              .collectionGroup('photos')
               .where('isPublic', isEqualTo: true)
               .orderBy('timestamp', descending: true)
-              .limit(limit)
               .get();
 
       return querySnapshot.docs
-          .map((doc) => PhotoModel.fromMap(doc.data(), doc.id))
+          .map((doc) => PhotoModel.fromMap(doc.data()))
           .toList();
     } catch (e) {
+      debugPrint("❌ Firestore fetchPublicPhotos failed: $e");
       throw Exception("❌ Firestore fetchPublicPhotos failed: $e");
     }
   }
