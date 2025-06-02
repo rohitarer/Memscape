@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:memscape/providers/photo_provider.dart';
 
 import 'explore_feed_screen.dart';
 import 'explore_map_screen.dart';

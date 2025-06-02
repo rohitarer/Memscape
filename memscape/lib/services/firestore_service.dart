@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geocoding/geocoding.dart';
 import '../models/photo_model.dart';
 
 class FirestoreService {
@@ -14,31 +18,83 @@ class FirestoreService {
   /// Upload base64 to Realtime DB and metadata to Firestore (excluding base64)
   Future<void> uploadPhoto(PhotoModel photo, String base64Image) async {
     try {
-      final place = photo.place.trim().isEmpty ? "Unknown" : photo.place;
-      final docRef =
-          _firestore
-              .collection('photos')
-              .doc(place) // Folder for each place
-              .collection('photos')
-              .doc(); // Auto-generated photo document
-
+      final docRef = _firestore.collection('photos').doc();
       final imagePath = "$base64ImagePath/${docRef.id}";
 
-      // 🔼 Upload base64 image to Realtime Database
       await _realtime.ref(imagePath).set(base64Image);
-
-      // 📄 Prepare metadata (excluding base64)
       final updatedPhoto = photo.copyWith(imagePath: imagePath);
-
-      // 🔽 Upload photo metadata to Firestore
       await docRef.set(updatedPhoto.toMap());
 
-      // 🔁 Add Firestore reference under user's data (optional)
       await uploadPhotoReference(photo.uid, docRef.id);
-
-      print("✅ Firestore: Metadata saved | Realtime DB → $imagePath");
     } catch (e) {
       throw Exception("❌ Firestore uploadPhoto failed: $e");
+    }
+  }
+
+  Future<void> uploadFullMemory({
+    required File imageFile,
+    required String caption,
+    required String locationInput,
+    required bool isPublic,
+    required String uid,
+    double? fallbackLat,
+    double? fallbackLng,
+  }) async {
+    try {
+      // 1️⃣ Geocode location
+      double lat, lng;
+      String country = "Unknown", state = "Unknown", city = "Unknown";
+
+      try {
+        final locationList = await locationFromAddress(locationInput);
+        lat = locationList.first.latitude;
+        lng = locationList.first.longitude;
+
+        final placemarks = await placemarkFromCoordinates(lat, lng);
+        if (placemarks.isNotEmpty) {
+          final mark = placemarks.first;
+          country = mark.country ?? "Unknown";
+          state = mark.administrativeArea ?? "Unknown";
+          city = mark.locality ?? mark.subAdministrativeArea ?? "Unknown";
+        }
+      } catch (e) {
+        if (fallbackLat != null && fallbackLng != null) {
+          lat = fallbackLat;
+          lng = fallbackLng;
+        } else {
+          throw Exception("❌ Geocoding failed: $e");
+        }
+      }
+
+      final readablePlace = [
+        city,
+        state,
+        country,
+      ].where((e) => e != "Unknown").join(', ');
+
+      // 2️⃣ Prepare model
+      final photo = PhotoModel(
+        uid: uid,
+        caption: caption,
+        location: locationInput,
+        timestamp: DateTime.now(),
+        lat: lat,
+        lng: lng,
+        isPublic: isPublic,
+        place: readablePlace.isNotEmpty ? readablePlace : "Unknown",
+      );
+
+      // 3️⃣ Encode image and upload
+      final base64Image = base64Encode(await imageFile.readAsBytes());
+      final docRef = _firestore.collection('photos').doc();
+      final imagePath = "$base64ImagePath/${docRef.id}";
+
+      await _realtime.ref(imagePath).set(base64Image);
+      await docRef.set(photo.copyWith(imagePath: imagePath).toMap());
+
+      await uploadPhotoReference(uid, docRef.id);
+    } catch (e) {
+      throw Exception("❌ uploadFullMemory failed: $e");
     }
   }
 
@@ -65,7 +121,7 @@ class FirestoreService {
     try {
       final querySnapshot =
           await FirebaseFirestore.instance
-              .collectionGroup('photos')
+              .collection('photos')
               .where('isPublic', isEqualTo: true)
               .orderBy('timestamp', descending: true)
               .get();

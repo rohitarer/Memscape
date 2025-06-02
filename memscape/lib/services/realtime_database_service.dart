@@ -44,70 +44,100 @@ class RealtimeDatabaseService {
   // }
 
   /// ✅ Upload base64 image to Realtime DB under /images/{imageId}
-Future<void> uploadBase64Image(String imageId, String base64) async {
-  try {
-    await _db.child('images').child(imageId).set(base64);
-    debugPrint("🖼️ Base64 image uploaded at images/$imageId");
-  } catch (e) {
-    throw Exception("❌ Failed to upload base64 image: $e");
+  Future<void> uploadBase64Image(String imageId, String base64) async {
+    try {
+      await _db.child('images').child(imageId).set(base64);
+      debugPrint("🖼️ Base64 image uploaded at images/$imageId");
+    } catch (e) {
+      throw Exception("❌ Failed to upload base64 image: $e");
+    }
   }
-}
 
-/// 🔼 Upload metadata (excluding base64) to /photos/{uid}/{imageId}
-Future<void> uploadPhotoMetadata(PhotoModel photo, String imageId) async {
-  try {
-    final metadata = photo.copyWith(
-      imageBase64: null,
-      imagePath: "images/$imageId",
-    ).toMap();
+  /// 🔼 Upload metadata (excluding base64) to /photos/{uid}/{imageId}
+  Future<void> uploadPhotoMetadata(PhotoModel photo, String imageId) async {
+    try {
+      final metadata =
+          photo
+              .copyWith(imageBase64: null, imagePath: "images/$imageId")
+              .toMap();
 
-    await _db
-        .child('photos')
-        .child(photo.uid)
-        .child(imageId)
-        .set(metadata);
+      await _db.child('photos').child(photo.uid).child(imageId).set(metadata);
 
-    debugPrint("✅ Metadata uploaded for ${photo.uid} → $imageId");
-  } catch (e) {
-    throw Exception("❌ Failed to upload metadata: $e");
+      debugPrint("✅ Metadata uploaded for ${photo.uid} → $imageId");
+    } catch (e) {
+      throw Exception("❌ Failed to upload metadata: $e");
+    }
   }
-}
 
-/// 🚀 High-level function: Upload photo base64 + metadata
-Future<void> uploadPhoto(PhotoModel photo) async {
-  final imageId = "${photo.caption}_${photo.timestamp.millisecondsSinceEpoch}";
+  /// 🚀 High-level function: Upload photo base64 + metadata
+  Future<void> uploadPhoto(PhotoModel photo) async {
+    final imageId =
+        "${photo.caption}_${photo.timestamp.millisecondsSinceEpoch}";
 
-  await uploadBase64Image(imageId, photo.imageBase64 ?? '');
-  await uploadPhotoMetadata(photo, imageId);
-}
-
+    await uploadBase64Image(imageId, photo.imageBase64 ?? '');
+    await uploadPhotoMetadata(photo, imageId);
+  }
 
   /// 📥 Fetch all photos from all users (for map/explore)
+  // Future<List<PhotoModel>> getAllPhotos() async {
+  //   try {
+  //     final snapshot = await _db.child('photos').get();
+  //     if (!snapshot.exists || snapshot.value == null) return [];
+
+  //     final Map data = snapshot.value as Map;
+  //     final List<PhotoModel> allPhotos = [];
+
+  //     for (final uidEntry in data.entries) {
+  //       if (uidEntry.value is! Map) continue;
+
+  //       final userPhotos = uidEntry.value as Map;
+  //       for (final photoEntry in userPhotos.entries) {
+  //         try {
+  //           final map = Map<String, dynamic>.from(photoEntry.value);
+  //           allPhotos.add(PhotoModel.fromMap(map));
+  //         } catch (e) {
+  //           debugPrint("⚠️ Skipped malformed photo entry: $e");
+  //         }
+  //       }
+  //     }
+
+  //     return allPhotos;
+  //   } catch (e) {
+  //     throw Exception("❌ Error fetching all photos: $e");
+  //   }
+  // }
+
   Future<List<PhotoModel>> getAllPhotos() async {
     try {
       final snapshot = await _db.child('photos').get();
       if (!snapshot.exists || snapshot.value == null) return [];
 
-      final Map data = snapshot.value as Map;
+      final Map<dynamic, dynamic> data =
+          snapshot.value as Map<dynamic, dynamic>;
       final List<PhotoModel> allPhotos = [];
 
       for (final uidEntry in data.entries) {
         if (uidEntry.value is! Map) continue;
 
-        final userPhotos = uidEntry.value as Map;
+        final userPhotos = uidEntry.value as Map<dynamic, dynamic>;
         for (final photoEntry in userPhotos.entries) {
           try {
             final map = Map<String, dynamic>.from(photoEntry.value);
-            allPhotos.add(PhotoModel.fromMap(map));
+            final id = photoEntry.key.toString(); // Set the photo's ID
+            allPhotos.add(PhotoModel.fromMap(map, id));
           } catch (e) {
-            debugPrint("⚠️ Skipped malformed photo entry: $e");
+            debugPrint(
+              "⚠️ Skipped malformed photo entry under user ${uidEntry.key}: $e",
+            );
           }
         }
       }
 
+      debugPrint("✅ Total photos loaded: ${allPhotos.length}");
       return allPhotos;
     } catch (e) {
-      throw Exception("❌ Error fetching all photos: $e");
+      debugPrint("❌ Error fetching all photos: $e");
+      throw Exception("Error fetching photos: $e");
     }
   }
 

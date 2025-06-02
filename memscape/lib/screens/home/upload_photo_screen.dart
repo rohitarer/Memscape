@@ -12,7 +12,6 @@ import 'package:geocoding/geocoding.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:memscape/screens/home/home_screen.dart';
 
-import 'package:memscape/services/firestore_service.dart';
 import '../../models/photo_model.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/primary_button.dart';
@@ -218,18 +217,14 @@ class _UploadPhotoScreenState extends ConsumerState<UploadPhotoScreen> {
   //   }
   // }
   Future<void> uploadMemory() async {
-    debugPrint("🟡 Upload started");
-
     if (_selectedImage == null) {
       _showSnackBar("❗ Please select an image.");
-      debugPrint("❌ No image selected");
       return;
     }
 
     if (captionController.text.trim().isEmpty ||
         locationController.text.trim().isEmpty) {
       _showSnackBar("⚠️ Please enter a caption and location.");
-      debugPrint("⚠️ Caption or location is empty");
       return;
     }
 
@@ -237,117 +232,40 @@ class _UploadPhotoScreenState extends ConsumerState<UploadPhotoScreen> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception("❌ User not authenticated");
+      if (user == null) throw Exception("User not authenticated");
 
-      final locationInput = locationController.text.trim();
-      debugPrint("📍 Location input: $locationInput");
-
-      double finalLat, finalLng;
-      String country = "Unknown";
-      String state = "Unknown";
-      String city = "Unknown";
-
-      try {
-        final locationList = await locationFromAddress(locationInput);
-        finalLat = locationList.first.latitude;
-        finalLng = locationList.first.longitude;
-        debugPrint("✅ Geocoded coordinates: ($finalLat, $finalLng)");
-
-        final placemarks = await placemarkFromCoordinates(finalLat, finalLng);
-        if (placemarks.isNotEmpty) {
-          final mark = placemarks.first;
-          country = mark.country ?? "Unknown";
-          state = mark.administrativeArea ?? "Unknown";
-          city = mark.locality ?? mark.subAdministrativeArea ?? "Unknown";
-          debugPrint(
-            "📌 Placemark - City: $city, State: $state, Country: $country",
-          );
-        }
-      } catch (e) {
-        debugPrint("⚠️ Geocoding failed: $e");
-
-        if (_lat != null && _lng != null) {
-          finalLat = _lat!;
-          finalLng = _lng!;
-          debugPrint("🗺️ Using fallback _lat/_lng: ($finalLat, $finalLng)");
-        } else {
-          throw Exception("❌ Unable to determine location coordinates.");
-        }
-      }
-
-      // 🔤 Clean readable location key
-      String readablePlace = [
-        city,
-        state,
-        country,
-      ].where((e) => e != "Unknown").join(', ');
-      if (readablePlace.isEmpty) readablePlace = "Unknown_Location";
-
-      // 🧼 Sanitize to Firestore-safe key
-      final sanitizedPlace = readablePlace
-          .replaceAll(RegExp(r'[^\w\s]'), '')
-          .replaceAll(' ', '_');
-
-      debugPrint("📂 Using location key: $sanitizedPlace");
-
-      // 🖼️ Convert image to base64
       final base64Image = await encodeImageToBase64(_selectedImage!);
-      debugPrint("🖼️ Image encoded to base64 (length: ${base64Image.length})");
+      final photoId = FirebaseFirestore.instance.collection('photos').doc().id;
+      final imagePath = "images/$photoId";
 
-      // 📸 Build metadata model
+      await FirebaseDatabase.instance.ref(imagePath).set(base64Image);
+
       final photo = PhotoModel(
         uid: user.uid,
         caption: captionController.text.trim(),
-        location: locationInput,
+        location: locationController.text.trim(),
         timestamp: DateTime.now(),
-        lat: finalLat,
-        lng: finalLng,
+        lat: _lat ?? 0,
+        lng: _lng ?? 0,
         isPublic: isPublic,
-        place: readablePlace,
-      );
+        place: locationController.text.split(',').first.trim(),
+      ).copyWith(imagePath: imagePath);
 
-      debugPrint("📤 Preparing to upload to Firestore & Realtime DB...");
+      await FirebaseFirestore.instance
+          .collection("photos")
+          .doc(photoId)
+          .set(photo.toMap());
 
-      // 🧾 Generate Firestore doc reference
-      final docRef =
-          FirebaseFirestore.instance
-              .collection('photos')
-              .doc(sanitizedPlace)
-              .collection('photos')
-              .doc();
-
-      final imagePath = "images/${docRef.id}";
-
-      // ☁️ Upload base64 image to Realtime DB
-      await FirebaseDatabase.instance.ref(imagePath).set(base64Image);
-      debugPrint("✅ Image uploaded to Realtime DB at $imagePath");
-
-      // 📝 Upload metadata to Firestore
-      await docRef.set(photo.copyWith(imagePath: imagePath).toMap());
-      debugPrint("✅ Metadata uploaded to Firestore at ${docRef.path}");
-
-      // 📎 Update user's photoRefs
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(
-        {
-          'photoRefs': FieldValue.arrayUnion([docRef.id]),
-        },
-      );
-      debugPrint("📎 Added ${docRef.id} to user's photoRefs array");
-
-      // 🔁 Navigate back to home
-      if (context.mounted) {
-        debugPrint("🏁 Navigating to HomeScreen...");
+      if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
           (route) => false,
         );
       }
     } catch (e) {
-      _showSnackBar("❌ Upload failed: ${e.toString()}");
-      debugPrint("🔥 Exception during upload: $e");
+      _showSnackBar("❌ Upload failed: $e");
     } finally {
       if (mounted) setState(() => isLoading = false);
-      debugPrint("🟢 Upload process finished");
     }
   }
 
