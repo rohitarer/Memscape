@@ -14,15 +14,15 @@ val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build"
 rootProject.layout.buildDirectory.value(newBuildDir)
 
 subprojects {
-    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-    project.layout.buildDirectory.value(newSubprojectBuildDir)
+    // val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
+    // project.layout.buildDirectory.value(newSubprojectBuildDir)
 
     // ✅ Apply Google Services plugin where needed
-    afterEvaluate {
-        if (plugins.hasPlugin("com.android.application") || plugins.hasPlugin("com.android.library")) {
-            apply(plugin = "com.google.gms.google-services")
-        }
-    }
+    // afterEvaluate {
+    //     if (plugins.hasPlugin("com.android.application") || plugins.hasPlugin("com.android.library")) {
+    //         apply(plugin = "com.google.gms.google-services")
+    //     }
+    // }
 }
 
 tasks.register<Delete>("clean") {

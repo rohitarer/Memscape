@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -15,6 +14,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:memscape/models/nominatim_location.dart';
 import 'package:memscape/models/photo_model.dart';
 import 'package:memscape/providers/photo_provider.dart';
+import 'package:memscape/screens/home/location_photos_screen.dart';
 import 'package:memscape/services/firestore_service.dart';
 import 'package:memscape/services/realtime_database_service.dart';
 
@@ -210,224 +210,9 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
     });
   }
 
-  // Future<void> _searchPlace(String query, {LatLng? forcedCoords}) async {
-  //   try {
-  //     // 1. Determine coordinates
-  //     final LatLng newCenter;
-  //     if (forcedCoords != null) {
-  //       newCenter = forcedCoords;
-  //     } else {
-  //       final locations = await locationFromAddress(query);
-  //       if (locations.isEmpty) throw Exception("Location not found");
-  //       newCenter = LatLng(locations.first.latitude, locations.first.longitude);
-  //     }
-
-  //     debugPrint(
-  //       "📍 Selected coordinates: ${newCenter.latitude}, ${newCenter.longitude}",
-  //     );
-
-  //     // 2. Get Place Details
-  //     final placemarks = await placemarkFromCoordinates(
-  //       newCenter.latitude,
-  //       newCenter.longitude,
-  //     );
-
-  //     if (placemarks.isEmpty) throw Exception("Place details not found");
-
-  //     final placemark = placemarks.first;
-  //     final city =
-  //         (placemark.locality ?? placemark.subAdministrativeArea ?? '')
-  //             .toLowerCase()
-  //             .trim();
-  //     final state = (placemark.administrativeArea ?? '').toLowerCase().trim();
-  //     final country = (placemark.country ?? '').toLowerCase().trim();
-  //     final normalizedPlace = "$city, $state, $country";
-  //     final normalizedQuery = query.toLowerCase().trim();
-
-  //     // 3. Fetch All Public Photos from Firestore
-  //     final snapshot =
-  //         await FirebaseFirestore.instance
-  //             .collection('photos')
-  //             .where('isPublic', isEqualTo: true)
-  //             .get();
-
-  //     final allPhotos =
-  //         snapshot.docs
-  //             .map((doc) => PhotoModel.fromMap(doc.data(), doc.id))
-  //             .where(
-  //               (photo) =>
-  //                   photo.imagePath != null &&
-  //                   photo.imagePath!.isNotEmpty &&
-  //                   photo.location.isNotEmpty,
-  //             )
-  //             .toList();
-
-  //     debugPrint("📸 Total public photos fetched: ${allPhotos.length}");
-
-  //     // 4. Filter Photos by matching location (fuzzy match)
-  //     List<PhotoModel> matchedPhotos =
-  //         allPhotos.where((photo) {
-  //           final location = photo.location.toLowerCase();
-  //           return location.contains(city) && location.contains(state);
-  //         }).toList();
-
-  //     // 5. Remove duplicates using lat/lng key
-  //     final seen = <String>{};
-  //     final uniquePhotos =
-  //         matchedPhotos.where((photo) {
-  //           final key = "${photo.lat}_${photo.lng}";
-  //           return seen.add(key);
-  //         }).toList();
-
-  //     // 6. Sort by timestamp (newest first)
-  //     uniquePhotos.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-  //     debugPrint("✅ Unique matched photos: ${uniquePhotos.length}");
-
-  //     // 7. Update UI state
-  //     setState(() {
-  //       _searchLocation = newCenter;
-  //       _searchedCity = city;
-  //       _searchedState = state;
-  //       _filteredPhotos = uniquePhotos;
-  //       _showSheet = uniquePhotos.isNotEmpty;
-  //       _isManualSearch = true;
-  //     });
-
-  //     // 8. Move the map to search location
-  //     _mapController.move(newCenter, 12.5);
-  //   } catch (e) {
-  //     debugPrint("❌ Error searching location: $e");
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: const Text("Place not found."),
-  //         backgroundColor: Theme.of(context).colorScheme.error,
-  //       ),
-  //     );
-  //   }
-  // }
   String normalize(String text) {
     return text.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
   }
-
-  // Future<void> _searchPlace(String query, {LatLng? forcedCoords}) async {
-  //   try {
-  //     // 1. Determine coordinates
-  //     final LatLng newCenter;
-  //     if (forcedCoords != null) {
-  //       newCenter = forcedCoords;
-  //     } else {
-  //       final locations = await locationFromAddress(query);
-  //       if (locations.isEmpty) throw Exception("Location not found");
-  //       newCenter = LatLng(locations.first.latitude, locations.first.longitude);
-  //     }
-
-  //     debugPrint(
-  //       "📍 Selected coordinates: ${newCenter.latitude}, ${newCenter.longitude}",
-  //     );
-
-  //     // 2. Get Place Details
-  //     final placemarks = await placemarkFromCoordinates(
-  //       newCenter.latitude,
-  //       newCenter.longitude,
-  //     );
-  //     if (placemarks.isEmpty) throw Exception("Place details not found");
-
-  //     final placemark = placemarks.first;
-  //     final city =
-  //         (placemark.locality ?? placemark.subAdministrativeArea ?? '')
-  //             .toLowerCase()
-  //             .trim();
-  //     final state = (placemark.administrativeArea ?? '').toLowerCase().trim();
-  //     final country = (placemark.country ?? '').toLowerCase().trim();
-  //     // final normalizedPlace = "$city, $state, $country";
-  //     // final normalizedQuery = query.toLowerCase().trim();
-
-  //     // 3. Fetch All Public Photos from Firestore
-  //     final snapshot =
-  //         await FirebaseFirestore.instance
-  //             .collection('photos')
-  //             .where('isPublic', isEqualTo: true)
-  //             .get();
-
-  //     final allPhotos =
-  //         snapshot.docs
-  //             .map((doc) => PhotoModel.fromMap(doc.data(), doc.id))
-  //             .where(
-  //               (photo) =>
-  //                   photo.imagePath != null &&
-  //                   photo.imagePath!.isNotEmpty &&
-  //                   photo.location.isNotEmpty,
-  //             )
-  //             .toList();
-
-  //     debugPrint("📸 Total public photos fetched: ${allPhotos.length}");
-
-  //     final normalizedQuery = query.toLowerCase().trim();
-
-  //     // Prioritize exact match first
-  //     List<PhotoModel> matchedPhotos =
-  //         allPhotos.where((photo) {
-  //           final location = photo.location.toLowerCase().trim();
-  //           return location == normalizedQuery;
-  //         }).toList();
-
-  //     // If no exact match found, fallback to partial match by city/state/country
-  //     if (matchedPhotos.isEmpty) {
-  //       matchedPhotos =
-  //           allPhotos.where((photo) {
-  //             final loc = photo.location.toLowerCase();
-  //             return loc.contains(city) &&
-  //                 loc.contains(state) &&
-  //                 loc.contains(country);
-  //           }).toList();
-  //     }
-
-  //     // 6. Remove duplicates using lat/lng key
-  //     // final seen = <String>{};
-  //     // final uniquePhotos =
-  //     //     matchedPhotos.where((photo) {
-  //     //       final key = "${photo.lat}_${photo.lng}";
-  //     //       return seen.add(key);
-  //     //     }).toList();
-  //     final Map<String, PhotoModel> latestPerLocation = {};
-
-  //     for (final photo in matchedPhotos) {
-  //       final locKey = photo.location.toLowerCase().trim();
-
-  //       if (!latestPerLocation.containsKey(locKey)) {
-  //         latestPerLocation[locKey] = photo;
-  //       }
-  //     }
-  //     final uniquePhotos = latestPerLocation.values.toList();
-
-  //     // 7. Sort by timestamp (latest first)
-  //     uniquePhotos.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-  //     debugPrint("✅ Final matched photos: ${uniquePhotos.length}");
-
-  //     // 8. Update UI state
-  //     setState(() {
-  //       _searchLocation = newCenter;
-  //       _searchedCity = city;
-  //       _searchedState = state;
-  //       _filteredPhotos = uniquePhotos;
-  //       _showSheet = uniquePhotos.isNotEmpty;
-  //       _isManualSearch = true;
-  //     });
-
-  //     // 9. Move map to new location
-  //     _mapController.move(newCenter, 12.5);
-  //   } catch (e) {
-  //     debugPrint("❌ Error searching location: $e");
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: const Text("Place not found."),
-  //         backgroundColor: Theme.of(context).colorScheme.error,
-  //       ),
-  //     );
-  //   }
-  // }
 
   Future<void> _searchPlace(String query, {LatLng? forcedCoords}) async {
     try {
@@ -766,50 +551,7 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.memscape.app',
                   ),
-                  // MarkerLayer(
-                  //   markers: [
-                  //     if (_userLocation != null)
-                  //       Marker(
-                  //         point: _userLocation!,
-                  //         width: 40,
-                  //         height: 40,
-                  //         child: Transform.rotate(
-                  //           angle: (_userHeading ?? 0) * (pi / 180),
-                  //           child: const Icon(
-                  //             Icons.navigation,
-                  //             size: 40,
-                  //             color: Colors.blue,
-                  //           ),
-                  //         ),
-                  //       ),
-                  //     if (_suggestionSelectedMarker != null)
-                  //       Marker(
-                  //         point: _suggestionSelectedMarker!,
-                  //         width: 40,
-                  //         height: 40,
-                  //         child: const Icon(
-                  //           Icons.location_on,
-                  //           size: 40,
-                  //           color: Colors.red,
-                  //         ),
-                  //       ),
-                  //     ..._filteredPhotos.map(
-                  //       (photo) => Marker(
-                  //         point: LatLng(photo.lat!, photo.lng!),
-                  //         width: 40,
-                  //         height: 40,
-                  //         child: GestureDetector(
-                  //           onTap: () => _showMemoryDialog(context, photo),
-                  //           child: const Icon(
-                  //             Icons.location_on,
-                  //             size: 40,
-                  //             color: Colors.red,
-                  //           ),
-                  //         ),
-                  //       ),
-                  //     ),
-                  //   ],
-                  // ),
+
                   MarkerLayer(
                     markers: [
                       // 🔵 Blue user GPS marker only if not in search mode
@@ -830,35 +572,6 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
                           ),
                         ),
 
-                      // 🔴 Red marker for searched location
-                      // if (_searchLocation != null)
-                      //   Marker(
-                      //     point: _searchLocation!,
-                      //     width: 40,
-                      //     height: 40,
-                      //     child: GestureDetector(
-                      //       onTap:
-                      //           () => _showMemoryDialog(
-                      //             context,
-                      //             PhotoModel(
-                      //               uid: 'search_dummy', // 🔒 dummy UID
-                      //               caption:
-                      //                   'Searched Location', // 📝 placeholder caption
-                      //               location: _searchedCity ?? 'Unknown',
-                      //               place: _searchedCity ?? 'Unknown',
-                      //               timestamp: DateTime.now(), // ⏰ use current time
-                      //               lat: _searchLocation!.latitude,
-                      //               lng: _searchLocation!.longitude,
-                      //               isPublic: false, // not a real public photo
-                      //             ),
-                      //           ),
-                      //       child: const Icon(
-                      //         Icons.location_on,
-                      //         size: 40,
-                      //         color: Colors.red,
-                      //       ),
-                      //     ),
-                      //   ),
                       if (_searchLocation != null)
                         Marker(
                           point: _searchLocation!,
@@ -979,449 +692,6 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
                 ],
               ),
 
-              // 🧾 DRAGGABLE SHEET
-              // if (_showSheet && _filteredPhotos.isNotEmpty)
-              //   DraggableScrollableSheet(
-              //     initialChildSize: 0.3,
-              //     minChildSize: 0.2,
-              //     maxChildSize: 0.75,
-              //     builder: (context, scrollController) {
-              //       final theme = Theme.of(context);
-              //       final colorScheme = theme.colorScheme;
-
-              //       return Container(
-              //         decoration: BoxDecoration(
-              //           color: colorScheme.surface,
-              //           borderRadius: const BorderRadius.vertical(
-              //             top: Radius.circular(20),
-              //           ),
-              //           boxShadow: const [
-              //             BoxShadow(blurRadius: 8, color: Colors.black26),
-              //           ],
-              //         ),
-              //         padding: const EdgeInsets.all(16),
-              //         child: Column(
-              //           crossAxisAlignment: CrossAxisAlignment.start,
-              //           children: [
-              //             Center(
-              //               child: Container(
-              //                 width: 40,
-              //                 height: 4,
-              //                 decoration: BoxDecoration(
-              //                   color: colorScheme.outlineVariant,
-              //                   borderRadius: BorderRadius.circular(2),
-              //                 ),
-              //               ),
-              //             ),
-              //             const SizedBox(height: 12),
-              //             Text(
-              //               "📍 Memories in '${_searchedCity?.toUpperCase() ?? '...'}'",
-              //               style: theme.textTheme.titleMedium?.copyWith(
-              //                 fontWeight: FontWeight.bold,
-              //                 color: colorScheme.onSurface,
-              //               ),
-              //             ),
-              //             const SizedBox(height: 12),
-              //             Expanded(
-              //               child: ListView.builder(
-              //                 controller: scrollController,
-              //                 itemCount: _filteredPhotos.length,
-              //                 itemBuilder: (_, index) {
-              //                   final photo = _filteredPhotos[index];
-
-              //                   final double? lat = photo.lat;
-              //                   final double? lng = photo.lng;
-              //                   final String caption = photo.caption;
-              //                   final String location = photo.location;
-              //                   final String? base64Image = photo.imageBase64;
-
-              //                   return Card(
-              //                     elevation: 3,
-              //                     margin: const EdgeInsets.symmetric(
-              //                       vertical: 8,
-              //                     ),
-              //                     shape: RoundedRectangleBorder(
-              //                       borderRadius: BorderRadius.circular(16),
-              //                     ),
-              //                     color: colorScheme.surface,
-              //                     child: InkWell(
-              //                       borderRadius: BorderRadius.circular(16),
-              //                       onTap: () {
-              //                         if (lat != null && lng != null) {
-              //                           setState(() {
-              //                             _routePoints = [];
-              //                             _enableMapRotation = false;
-              //                             _mapController.rotate(0);
-              //                             _mapController.move(
-              //                               LatLng(lat, lng),
-              //                               14,
-              //                             );
-              //                           });
-              //                         }
-              //                       },
-              //                       child: Column(
-              //                         crossAxisAlignment:
-              //                             CrossAxisAlignment.stretch,
-              //                         children: [
-              //                           if (base64Image != null &&
-              //                               base64Image.isNotEmpty)
-              //                             ClipRRect(
-              //                               borderRadius:
-              //                                   const BorderRadius.vertical(
-              //                                     top: Radius.circular(16),
-              //                                   ),
-              //                               child: Image.memory(
-              //                                 base64Decode(base64Image),
-              //                                 height: 160,
-              //                                 fit: BoxFit.cover,
-              //                               ),
-              //                             ),
-              //                           Padding(
-              //                             padding: const EdgeInsets.all(12),
-              //                             child: Column(
-              //                               crossAxisAlignment:
-              //                                   CrossAxisAlignment.start,
-              //                               children: [
-              //                                 Text(
-              //                                   caption ?? 'No Caption',
-              //                                   style: theme.textTheme.bodyLarge
-              //                                       ?.copyWith(
-              //                                         fontWeight:
-              //                                             FontWeight.w600,
-              //                                         color:
-              //                                             colorScheme.onSurface,
-              //                                       ),
-              //                                 ),
-              //                                 const SizedBox(height: 4),
-              //                                 Text(
-              //                                   location ?? 'Unknown location',
-              //                                   style: theme
-              //                                       .textTheme
-              //                                       .bodyMedium
-              //                                       ?.copyWith(
-              //                                         color:
-              //                                             colorScheme.outline,
-              //                                       ),
-              //                                 ),
-              //                                 const SizedBox(height: 10),
-              //                                 SingleChildScrollView(
-              //                                   scrollDirection:
-              //                                       Axis.horizontal,
-              //                                   child: Row(
-              //                                     children: [
-              //                                       const SizedBox(width: 8),
-              //                                       ElevatedButton.icon(
-              //                                         onPressed: () {
-              //                                           if (lat != null &&
-              //                                               lng != null) {
-              //                                             _drawRoute(
-              //                                               'walking',
-              //                                               photo,
-              //                                             );
-              //                                           }
-              //                                         },
-              //                                         icon: const Icon(
-              //                                           Icons.directions_walk,
-              //                                         ),
-              //                                         label: const Text('Walk'),
-              //                                       ),
-              //                                       const SizedBox(width: 8),
-              //                                       ElevatedButton.icon(
-              //                                         onPressed: () {
-              //                                           if (lat != null &&
-              //                                               lng != null) {
-              //                                             _drawRoute(
-              //                                               'cycling',
-              //                                               photo,
-              //                                             );
-              //                                           }
-              //                                         },
-              //                                         icon: const Icon(
-              //                                           Icons.directions_bike,
-              //                                         ),
-              //                                         label: const Text('Bike'),
-              //                                       ),
-              //                                       const SizedBox(width: 8),
-              //                                       ElevatedButton.icon(
-              //                                         onPressed: () {
-              //                                           if (lat != null &&
-              //                                               lng != null) {
-              //                                             _drawRoute(
-              //                                               'driving',
-              //                                               photo,
-              //                                             );
-              //                                           }
-              //                                         },
-              //                                         icon: const Icon(
-              //                                           Icons.directions_car,
-              //                                         ),
-              //                                         label: const Text('Car'),
-              //                                       ),
-              //                                       const SizedBox(width: 8),
-              //                                       ElevatedButton.icon(
-              //                                         onPressed: () {
-              //                                           if (lat != null &&
-              //                                               lng != null) {
-              //                                             _drawPublicTransitRoute(
-              //                                               photo,
-              //                                             );
-              //                                           }
-              //                                         },
-              //                                         icon: const Icon(
-              //                                           Icons
-              //                                               .directions_transit,
-              //                                         ),
-              //                                         label: const Text(
-              //                                           'Transit',
-              //                                         ),
-              //                                       ),
-              //                                       const SizedBox(width: 8),
-              //                                     ],
-              //                                   ),
-              //                                 ),
-              //                               ],
-              //                             ),
-              //                           ),
-              //                         ],
-              //                       ),
-              //                     ),
-              //                   );
-              //                 },
-              //               ),
-              //             ),
-              //           ],
-              //         ),
-              //       );
-              //     },
-              //   ),
-              // if (_showSheet && _filteredPhotos.isNotEmpty)
-              //   DraggableScrollableSheet(
-              //     initialChildSize: 0.35,
-              //     minChildSize: 0.2,
-              //     maxChildSize: 0.75,
-              //     builder: (context, scrollController) {
-              //       final theme = Theme.of(context);
-              //       final colorScheme = theme.colorScheme;
-
-              //       return Container(
-              //         decoration: BoxDecoration(
-              //           color: colorScheme.surface,
-              //           borderRadius: const BorderRadius.vertical(
-              //             top: Radius.circular(20),
-              //           ),
-              //           boxShadow: const [
-              //             BoxShadow(blurRadius: 8, color: Colors.black26),
-              //           ],
-              //         ),
-              //         padding: const EdgeInsets.all(16),
-              //         child: Column(
-              //           crossAxisAlignment: CrossAxisAlignment.start,
-              //           children: [
-              //             Center(
-              //               child: Container(
-              //                 width: 40,
-              //                 height: 4,
-              //                 decoration: BoxDecoration(
-              //                   color: colorScheme.outlineVariant,
-              //                   borderRadius: BorderRadius.circular(2),
-              //                 ),
-              //               ),
-              //             ),
-              //             const SizedBox(height: 12),
-              //             Text(
-              //               "📍 Memories in '${_searchedCity?.toUpperCase() ?? '...'}'",
-              //               style: theme.textTheme.titleMedium?.copyWith(
-              //                 fontWeight: FontWeight.bold,
-              //                 color: colorScheme.onSurface,
-              //               ),
-              //             ),
-              //             const SizedBox(height: 12),
-              //             Expanded(
-              //               child: ListView.builder(
-              //                 controller: scrollController,
-              //                 itemCount: _filteredPhotos.length,
-              //                 itemBuilder: (_, index) {
-              //                   final photo = _filteredPhotos[index];
-              //                   final lat = photo.lat;
-              //                   final lng = photo.lng;
-              //                   final caption = photo.caption;
-              //                   final location = photo.location;
-
-              //                   print(
-              //                     "📸 Rendering card #$index for: $caption",
-              //                   );
-
-              //                   return Card(
-              //                     elevation: 3,
-              //                     margin: const EdgeInsets.symmetric(
-              //                       vertical: 8,
-              //                     ),
-              //                     shape: RoundedRectangleBorder(
-              //                       borderRadius: BorderRadius.circular(16),
-              //                     ),
-              //                     color: colorScheme.surface,
-              //                     child: InkWell(
-              //                       borderRadius: BorderRadius.circular(16),
-              //                       onTap: () {
-              //                         if (lat != null && lng != null) {
-              //                           setState(() {
-              //                             _routePoints = [];
-              //                             _enableMapRotation = false;
-              //                             _mapController.rotate(0);
-              //                             _mapController.move(
-              //                               LatLng(lat, lng),
-              //                               14,
-              //                             );
-              //                           });
-              //                         }
-              //                       },
-              //                       child: Column(
-              //                         crossAxisAlignment:
-              //                             CrossAxisAlignment.stretch,
-              //                         children: [
-              //                           FutureBuilder<String?>(
-              //                             future: firestoreService
-              //                                 .fetchImageBase64(
-              //                                   photo.imagePath!,
-              //                                 ),
-              //                             builder: (context, snapshot) {
-              //                               if (snapshot.connectionState ==
-              //                                   ConnectionState.waiting) {
-              //                                 return const SizedBox(
-              //                                   height: 160,
-              //                                   child: Center(
-              //                                     child:
-              //                                         CircularProgressIndicator(),
-              //                                   ),
-              //                                 );
-              //                               } else if (snapshot.hasData &&
-              //                                   snapshot.data != null) {
-              //                                 print(
-              //                                   "🖼️ Base64 Image loaded for: $caption",
-              //                                 );
-              //                                 final imageBytes = base64Decode(
-              //                                   snapshot.data!,
-              //                                 );
-              //                                 return ClipRRect(
-              //                                   borderRadius:
-              //                                       const BorderRadius.vertical(
-              //                                         top: Radius.circular(16),
-              //                                       ),
-              //                                   child: Image.memory(
-              //                                     imageBytes,
-              //                                     height: 160,
-              //                                     fit: BoxFit.cover,
-              //                                   ),
-              //                                 );
-              //                               } else {
-              //                                 print(
-              //                                   "⚠️ No base64 image found for: $caption",
-              //                                 );
-              //                                 return const SizedBox(
-              //                                   height: 160,
-              //                                   child: Center(
-              //                                     child: Text(
-              //                                       "📷 No image available",
-              //                                     ),
-              //                                   ),
-              //                                 );
-              //                               }
-              //                             },
-              //                           ),
-              //                           Padding(
-              //                             padding: const EdgeInsets.all(12),
-              //                             child: Column(
-              //                               crossAxisAlignment:
-              //                                   CrossAxisAlignment.start,
-              //                               children: [
-              //                                 Text(
-              //                                   caption,
-              //                                   style: theme.textTheme.bodyLarge
-              //                                       ?.copyWith(
-              //                                         fontWeight:
-              //                                             FontWeight.w600,
-              //                                         color:
-              //                                             colorScheme.onSurface,
-              //                                       ),
-              //                                 ),
-              //                                 const SizedBox(height: 4),
-              //                                 Text(
-              //                                   location,
-              //                                   style: theme
-              //                                       .textTheme
-              //                                       .bodyMedium
-              //                                       ?.copyWith(
-              //                                         color:
-              //                                             colorScheme.outline,
-              //                                       ),
-              //                                 ),
-              //                                 const SizedBox(height: 10),
-              //                                 Wrap(
-              //                                   spacing: 8,
-              //                                   children: [
-              //                                     ElevatedButton.icon(
-              //                                       onPressed:
-              //                                           () => _drawRoute(
-              //                                             'walking',
-              //                                             photo,
-              //                                           ),
-              //                                       icon: const Icon(
-              //                                         Icons.directions_walk,
-              //                                       ),
-              //                                       label: const Text('Walk'),
-              //                                     ),
-              //                                     ElevatedButton.icon(
-              //                                       onPressed:
-              //                                           () => _drawRoute(
-              //                                             'cycling',
-              //                                             photo,
-              //                                           ),
-              //                                       icon: const Icon(
-              //                                         Icons.directions_bike,
-              //                                       ),
-              //                                       label: const Text('Bike'),
-              //                                     ),
-              //                                     ElevatedButton.icon(
-              //                                       onPressed:
-              //                                           () => _drawRoute(
-              //                                             'driving',
-              //                                             photo,
-              //                                           ),
-              //                                       icon: const Icon(
-              //                                         Icons.directions_car,
-              //                                       ),
-              //                                       label: const Text('Car'),
-              //                                     ),
-              //                                     ElevatedButton.icon(
-              //                                       onPressed:
-              //                                           () =>
-              //                                               _drawPublicTransitRoute(
-              //                                                 photo,
-              //                                               ),
-              //                                       icon: const Icon(
-              //                                         Icons.directions_transit,
-              //                                       ),
-              //                                       label: const Text(
-              //                                         'Transit',
-              //                                       ),
-              //                                     ),
-              //                                   ],
-              //                                 ),
-              //                               ],
-              //                             ),
-              //                           ),
-              //                         ],
-              //                       ),
-              //                     ),
-              //                   );
-              //                 },
-              //               ),
-              //             ),
-              //           ],
-              //         ),
-              //       );
-              //     },
-              //   ),
               if (_showSheet && _filteredPhotos.isNotEmpty)
                 DraggableScrollableSheet(
                   initialChildSize: 0.35,
@@ -1525,8 +795,9 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
                                       children: [
                                         FutureBuilder<Uint8List?>(
                                           future: () async {
-                                            if (photo.decodedImage != null)
+                                            if (photo.decodedImage != null) {
                                               return photo.decodedImage;
+                                            }
 
                                             if (photo.imageBase64 != null &&
                                                 photo.imageBase64!.isNotEmpty) {
@@ -1579,15 +850,44 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
                                               );
                                             } else if (snapshot.hasData &&
                                                 snapshot.data != null) {
-                                              return ClipRRect(
-                                                borderRadius:
-                                                    const BorderRadius.vertical(
-                                                      top: Radius.circular(16),
+                                              // return ClipRRect(
+                                              //   borderRadius:
+                                              //       const BorderRadius.vertical(
+                                              //         top: Radius.circular(16),
+                                              //       ),
+                                              //   child: Image.memory(
+                                              //     snapshot.data!,
+                                              //     height: 160,
+                                              //     fit: BoxFit.cover,
+                                              //   ),
+                                              // );
+                                              return GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder:
+                                                          (
+                                                            _,
+                                                          ) => LocationPhotosScreen(
+                                                            location:
+                                                                photo.location,
+                                                          ),
                                                     ),
-                                                child: Image.memory(
-                                                  snapshot.data!,
-                                                  height: 160,
-                                                  fit: BoxFit.cover,
+                                                  );
+                                                },
+                                                child: ClipRRect(
+                                                  borderRadius:
+                                                      const BorderRadius.vertical(
+                                                        top: Radius.circular(
+                                                          16,
+                                                        ),
+                                                      ),
+                                                  child: Image.memory(
+                                                    snapshot.data!,
+                                                    height: 160,
+                                                    fit: BoxFit.cover,
+                                                  ),
                                                 ),
                                               );
                                             } else {
